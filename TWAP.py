@@ -11,11 +11,12 @@ breeze = BreezeConnect(api_key=api_key)
 breeze.generate_session(api_secret=api_secret,
                         session_token=api_session)
                         
-                        # initialize user inputs
+# Initialize User Inputs
 STOCK = "SUZENE"
-TIME_GAP_IN_SECONDS = float(2)
-QTY = 14
-SLICE = float(3)
+TIME_GAP_IN_SECONDS = float(2) # Time gap between 2 successive orders
+QTY = 14 # Total quantity to be bought
+SLICE = float(3) # percent of quantity to be bought in one order
+
 today = datetime.now()
 
 START_TIME = today.replace(hour=17,
@@ -31,6 +32,7 @@ END_TIME = today.replace(hour=17,
 ORDERBOOK=[]
 
 def if_market_open():
+    # This function return True if the markets are open otherwise returns False
     current_time = datetime.now()
     MARKET_OPEN = current_time.replace(hour=9,minute=15,second=0, microsecond=0)
     MARKET_CLOSE = current_time.replace(hour=15,minute=30,second=0, microsecond=0)
@@ -56,6 +58,7 @@ def get_current_price():
         print('Failed Quotes API request', error)
         
 def place_buy_order(limit_price):
+  #This function places order to buy one slice of stock at limit price
     global QTY,SLICE, STOCK
     
 
@@ -127,10 +130,14 @@ def start_strategy(duration):
         
     current_time = datetime.now()
     print(f"/nTWAP is complete.\nPending Orders are : {QTY}\nCurrent Time is : {current_time.strftime('%H:%M:%S')}")
-    exit()
+
+    # Exit this function when all orders are sent
+    break
 
 if __name__ == "__main__":
+  # This is the main function
     while(if_market_open()):
         start_strategy(20)
+        # exit the main loop when strategy function is finished 
         break
         
