@@ -132,7 +132,7 @@ def start_strategy(duration):
     print(f"/nTWAP is complete.\nPending Orders are : {QTY}\nCurrent Time is : {current_time.strftime('%H:%M:%S')}")
 
     # Exit this function when all orders are sent
-    break
+    return
 
 if __name__ == "__main__":
   # This is the main function
