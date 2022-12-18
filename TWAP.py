@@ -59,7 +59,7 @@ def get_current_price():
         
 def place_buy_order(limit_price):
   #This function places order to buy one slice of stock at limit price
-    global QTY,SLICE, STOCK
+    global QTY,SLICE, STOCK, ORDERBOOK
     
 
     if (QTY > 0 and QTY < SLICE): 
@@ -84,7 +84,7 @@ def place_buy_order(limit_price):
             QTY -= SLICE
             order_id = buy_order['Success']['order_id']
             print(f'Successfully placed limit order at {limit_price} \nOrder ID is {order_id}\n')
-            orderbook.append(order_id)
+            ORDERBOOK.append(order_id)
 
         else : 
             print('Failed to place order', buy_order)
@@ -92,8 +92,8 @@ def place_buy_order(limit_price):
     except Exception as error:
         print('Failed Place Order API Request', error)
 
-def start_strategy(duration):
-    # This function starts strategy for 'duration' seconds provided by user
+def start_strategy():
+    # This function starts TWAP strategy at START_TIME and ends at END_TIME or when order quantity becomes zero
         
     global ORDERBOOK, START_TIME, END_TIME, STOCK, QTY, SLICE
     ORDERBOOK = []
@@ -137,7 +137,7 @@ def start_strategy(duration):
 if __name__ == "__main__":
   # This is the main function
     while(if_market_open()):
-        start_strategy(20)
+        start_strategy()
         # exit the main loop when strategy function is finished 
         break
         
