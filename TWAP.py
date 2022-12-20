@@ -1,3 +1,11 @@
+#intialize keys
+
+api_key = "INSERT_YOUR_APP_KEY_HERE"
+api_secret = "INSERT_YOUR_SECRET_KEY_HERE"
+api_session = 'INSERT_YOUR_API_SESSION_HERE'
+
+#make sure to install latest library of Breeze using --> pip install --upgrade breeze-connect 
+
 import time
 import pandas as pd
 from datetime import timedelta, datetime
