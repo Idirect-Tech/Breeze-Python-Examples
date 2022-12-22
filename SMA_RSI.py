@@ -9,8 +9,8 @@ import pandas as pd
 from breeze_connect import BreezeConnect 
 
 # Create session object
-breeze = BreezeConnect(api_key=app_key)
-breeze.generate_session(api_secret=secret_key,session_token=session_token)
+breeze = BreezeConnect(api_key=api_key)
+breeze.generate_session(api_secret=api_secret,session_token=api_session)
 
 # Get data
 data = breeze.get_historical_data(interval="1minute",
