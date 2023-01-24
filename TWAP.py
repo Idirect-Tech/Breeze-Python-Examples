@@ -144,8 +144,7 @@ def start_strategy():
 
 if __name__ == "__main__":
   # This is the main function
-    while(if_market_open()):
-        start_strategy()
-        # exit the main loop when strategy function is finished 
-        break
-        
+  if_market_open():
+    start_strategy()
+  else:
+    print('Market is closed. Please try tomorrow !')
