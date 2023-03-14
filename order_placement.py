@@ -82,8 +82,8 @@ if __name__ == "__main__":
     print ("Starting Execution \n")
    
     # enter contract details
-    cx1 = get_contract('NIFTY-17000-16/mar/2023-CE', 'buy')
-    cx2 = get_contract('NIFTY-17000-16/mar/2023-PE', 'buy')
+    cx1 = get_contract('NIFTY-18500-23/mar/2023-CE', 'buy')
+    cx2 = get_contract('NIFTY-16000-23/mar/2023-PE', 'buy')
 
     # Place order
     call_order = place_order(cx1)
