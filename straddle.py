@@ -66,15 +66,15 @@ def place_order(each_leg):
         if(buy_order['Status']==200) : 
             order_id = buy_order['Success']['order_id']
             print(f'Successfully placed market order !\nOrder ID is {order_id}')
-            return order_id
+            
 
         else : 
             print('\nFailed to place order!\n', buy_order['Error'])
-            return False
+            
 
     except Exception as error:
         print('Place Order API Error!', error)
-        return False
+
 
 # **************************************************************************************************************        
 
@@ -82,9 +82,9 @@ if __name__ == "__main__":
     print ("Starting Execution \n")
    
     # enter contract details
-    cx1 = get_contract('NIFTY-18500-23/mar/2023-CE', 'buy')
-    cx2 = get_contract('NIFTY-16000-23/mar/2023-PE', 'buy')
+    cx1 = get_contract('NIFTY-17000-23/mar/2023-CE', 'buy')
+    cx2 = get_contract('NIFTY-17000-23/mar/2023-PE', 'buy')
 
     # Place order
-    call_order = place_order(cx1)
-    put_order = place_order(cx2)
+    place_order(cx1)
+    place_order(cx2)
