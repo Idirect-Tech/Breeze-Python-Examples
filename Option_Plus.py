@@ -40,11 +40,12 @@ option_plus_order = api.place_order(stock_code="NIFTY",
                                    order_rate_fresh="2", # fresh order price. 
                                    user_remark="Test")
 
+print(option_plus_order)
 
 fresh_order_id = float(option_plus_order["Success"]["order_id"])
 cover_order_id = fresh_order_id + 1
 
-print(" Order ID :",id)
+
 
 # To square off option plus order :
 # In Opiton Plus order, to square off your position - simply convert cover order from limit to market. 
