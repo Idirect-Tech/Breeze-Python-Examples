@@ -42,8 +42,8 @@ option_plus_order = api.place_order(stock_code="NIFTY",
 
 print(option_plus_order)
 
-fresh_order_id = float(option_plus_order["Success"]["order_id"])
-cover_order_id = fresh_order_id + 1
+fresh_order_id = option_plus_order["Success"]["order_id"]
+cover_order_id = str(int(fresh_order_id)+1)
 
 
 
