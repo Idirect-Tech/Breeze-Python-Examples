@@ -13,10 +13,10 @@ from datetime import timedelta, datetime
 from breeze_connect import BreezeConnect
 
 # Initialize SDK
-breeze = BreezeConnect(api_key=api_key)
+api = BreezeConnect(api_key=api_key)
 
 # Generate Session
-breeze.generate_session(api_secret=api_secret,
+api.generate_session(api_secret=api_secret,
                         session_token=api_session)
                         
   
