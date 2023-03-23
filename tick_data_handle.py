@@ -23,26 +23,14 @@ api.generate_session(api_secret=api_secret,
 # Connect to websocket
 api.ws_connect()
 
-#list to store tick data message
-tick_feed = []
-
 # Callback to receive ticks
 def on_ticks(ticks):
-    tick_feed.append(ticks)
-#     print("Ticks: {}".format(ticks))
+    print("Ticks: {}".format(ticks))
 
 api.on_ticks = on_ticks
 
 api.subscribe_feeds(exchange_code="NFO", 
                                stock_code="NIFTY", 
                                product_type="options", 
-                               expiry_date="25-Jan-2023", 
-                               strike_price="18000", right="Call", interval="1second")
-
-
-#wait for 30 seconds (enough time to collect some data in tick_feed list)
-time.sleep(30)
-
-#convert list of dict into dataframe
-data = pd.DataFrame(tick_feed)
-print(data)
+                               expiry_date="29-Mar-2023", 
+                               strike_price="17000", right="Call")
