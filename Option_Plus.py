@@ -46,7 +46,7 @@ fresh_order_id = option_plus_order["Success"]["order_id"]
 cover_order_id = str(int(fresh_order_id)+1)
 
 # To square off option plus order :
-# In Opiton Plus order, to square off your position - simply convert cover order from limit to market. 
+# In Option Plus order, to square off your position - simply convert cover order from limit to market. 
 
 modify_order = api.modify_order(order_id=cover_order_id,
                     exchange_code="NFO",
