@@ -149,6 +149,7 @@ if __name__ == "__main__":
     call_order = place_order(cx1)
     put_order = place_order(cx2)
 
-    # SquareOff order 
-    square_off_at_market(cx1)
-    square_off_at_market(cx2)
+#     SquareOff order (uncomment below)
+
+#     square_off_at_market(cx1) 
+#     square_off_at_market(cx2)
