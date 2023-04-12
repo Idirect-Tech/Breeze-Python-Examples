@@ -43,7 +43,9 @@ option_plus_order = api.place_order(stock_code="NIFTY",
 print(option_plus_order)
 
 fresh_order_id = option_plus_order["Success"]["order_id"]
-cover_order_id = str(int(fresh_order_id)+1)
+detail = api.get_order_detail('NFO',fresh_order_id)
+cover_order_id = detail['Success'][0]['parent_order_id']
+
 
 # To square off option plus order :
 # In Option Plus order, to square off your position - simply convert cover order from limit to market. 
