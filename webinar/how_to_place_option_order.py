@@ -14,7 +14,6 @@ api = BreezeConnect(api_key=api_key)
 api.generate_session(api_secret=api_secret,session_token=api_session)
 
 # Function to create a contract
-
 def get_contract(name, action):
     name = name.upper()
     details = name.split('-')
@@ -115,32 +114,10 @@ def square_off_at_market(each_leg):
 
 # **************************************************************************************************************            
 
-# Callback to receive ticks.
-# Event based function
-
-def on_ticks(ticks):
-    # print("Ticks: {}".format(ticks))
     
-    if('sourceNumber' in ticks.keys()):
-        status = ticks['orderStatus']
-        order_id = ticks['orderReference']
-        action = ticks['orderFlow']        
-        name = ticks['stockCode'] + ' | ' + ticks['expiryDate'] + ' | ' + ticks['strikePrice'] + ' | ' + ticks['optionType']
-        
-        print(f"ID : {order_id}\nAction : {action} {name}\nStatus : {status}\n")
-
-        
-        
-        
-# Main Function        
 if __name__ == "__main__":
     print ("Starting Execution \n")
-    
-    #Switch on Websockets
-    api.ws_connect()
-    api.on_ticks = on_ticks
-    api.subscribe_feeds(get_order_notification=True)
-    
+        
     # enter contract details
     cx1 = get_contract('NIFTY-18000-29/mar/2023-CE', 'buy')
     cx2 = get_contract('NIFTY-16000-29/mar/2023-PE', 'buy')
