@@ -4,16 +4,15 @@ api_key = "INSERT_YOUR_APP_KEY_HERE"
 api_secret = "INSERT_YOUR_SECRET_KEY_HERE"
 api_session = 'INSERT_YOUR_API_SESSION_HERE'
 
-# Select Stock (USE SYMBOL AS SHOWN ON NSE) eg: RELIANCE
-STOCK = 'RELIANCE' 
-
-import sys, subprocess, pkg_resources
-module=True
-
+# This function installs Breeze library
 def install():
     python = sys.executable
     subprocess.check_call([python, '-m', 'pip', 'install', 'breeze_connect'], stdout=subprocess.DEVNULL)
     print('Successfully installed Breeze !!')
+
+# Import necessary libraries
+import sys, subprocess, pkg_resources
+module=True
 
 while(module):
     try:
@@ -33,13 +32,16 @@ except NameError:
     print("Connection to demat account failed !!")
     
 try:
-    STOCK = api.get_names('NSE', STOCK)['isec_stock_code']
-    order = api.place_order(stock_code=STOCK,exchange_code="NSE",product="cash",action="buy",order_type="market",stoploss="",quantity="1",price="",validity="day")
     
-    if(order['Status'] == 200):
-        print(order['Success']['message'])
+    funds = api.get_funds()
+    
+    if(funds['Status'] == 200):
+      account = funds['Success']['bank_account']
+      balance = funds['Success']['total_bank_balance']
+      print(f"Account Number : {account},\nBank Balance: {balance}")
+        
     else:
-        print(order['Error'])
+        print(funds['Error'])
             
 except Exception as e:
     print("API request failed. Please try again !!/n", e)
