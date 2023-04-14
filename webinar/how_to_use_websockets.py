@@ -11,6 +11,7 @@ api_session = 'INSERT_YOUR_API_SESSION_HERE'
 # Import Libraries
 
 from datetime import datetime
+import pandas as pd
 from breeze_connect import BreezeConnect
 
 # Setup my API keys 
