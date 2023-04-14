@@ -196,11 +196,12 @@ if __name__ == "__main__":
     order_id = place_order(cx)
 
     #Initialize variables 
-    trailing_stoploss = 0
+    cost, level, take_profit, trailing_stoploss = 0,0,0,0
     
-    # Wait for few seconds for order to successfully executed    
+    # Wait for few seconds for order to get successfully executed    
     time.sleep(2)
     
+    # Get the execution price    
     cost = get_cost(order_id)
     level = cost
     take_profit = round(cost*1.1,1)
