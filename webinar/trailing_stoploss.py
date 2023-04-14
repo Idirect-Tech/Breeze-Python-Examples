@@ -121,9 +121,7 @@ def square_off_at_market(each_leg):
 # Callback to receive ticks.
 # Event based function
 
-def on_ticks(ticks):
-    # print("Ticks: {}".format(ticks))
-    
+def on_ticks(ticks):    
     global level, trailing_stoploss
 
     #trailing StopLoss
@@ -150,7 +148,7 @@ api.on_ticks = on_ticks
 def socket():
     api.ws_connect()
     api.on_ticks = on_ticks
-    api.subscribe_feeds(get_order_notification=True)
+    
     
 # ******************************************************************************************************************************                
 
@@ -174,11 +172,11 @@ def get_cost(order_id):
 
 # This function squares off open position and stops the streaming. Algo will stop after this.
 def close():
-    global take_profit_id
+    
     api.ws_disconnect()
     print(">>>>  Squaring off now  <<<<<")
-    square_off_at_market()
-    api.ws_disconnect()
+    square_off_at_market(cx)
+    
     
 # ******************************************************************************************************************************            
 
@@ -205,7 +203,7 @@ if __name__ == "__main__":
     cost = get_cost(order_id)
     level = cost
     take_profit = round(cost*1.1,1)
-    trailing_stoploss = round(original_cost * 0.95,1)
+    trailing_stoploss = round(cost * 0.95,1)
 
     print(f"Entry Cost : {cost}")
     print(f"Setting SL : {trailing_stoploss}")
