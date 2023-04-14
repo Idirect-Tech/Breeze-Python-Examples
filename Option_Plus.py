@@ -22,10 +22,6 @@ api.generate_session(api_secret=api_secret,
 # Below code will place 2 orders - fresh order and cover SLTP order.
 # Cover SLTP order is the limit order which squares off your fresh order at limit price when the price hits stop loss trigger price.
 
-# Place Option Plus order. 
-# Below code will place 2 orders - fresh order and cover SLTP order.
-# Cover SLTP order is the limit order which squares off your fresh order at limit price when the price hits stop loss trigger price.
-
 option_plus_order = api.place_order(stock_code="NIFTY",
                                    exchange_code="NFO",
                                    product="optionplus",
