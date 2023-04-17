@@ -52,6 +52,4 @@ if __name__ == "__main__":
                     product_type="options", 
                     expiry_date='27-Apr-2023', 
                     strike_price='17500', 
-                    right='call', 
-                    get_exchange_quotes=True, get_market_depth=False)
-    
+                    right='call', interval="1minute")
