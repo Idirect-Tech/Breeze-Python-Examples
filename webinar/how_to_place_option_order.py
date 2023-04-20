@@ -13,120 +13,47 @@ from breeze_connect import BreezeConnect
 api = BreezeConnect(api_key=api_key)
 api.generate_session(api_secret=api_secret,session_token=api_session)
 
-# Function to create a contract
-def get_contract(name, action):
-    name = name.upper()
-    details = name.split('-')
-    details[-1] = 'call' if (details[-1] == 'CE') else 'put'
-    
-    if (details[2].split("/")[1] in ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']):
-        expiry = datetime.strptime(details[2], "%d/%b/%Y")
-    else :
-        expiry = datetime.strptime(details[2], "%d/%m/%Y")
-                
-    contract = {'stock':details[0],
-                'strike': details[1],
-                'expiry': expiry.strftime('%Y-%m-%dT06:00:00.000Z'),
-                'expiry_date':expiry.strftime('%d-%m-%Y'),
-                'right': details[-1],
-                'name': name,
-                'action' : action
-    }
-    
-    return contract
 
-# **************************************************************************************************************        
-
-# Function to generate a signal
+# Function to place order
 def place_order(each_leg):
 
     today = datetime.now().strftime('%Y-%m-%dT06:00:00.000Z')    
-    print(f"\nPlacing {each_leg['right']} {each_leg['action']} market order")
+  
+    buy_order = api.place_order(stock_code=each_leg['stock'],
+                                exchange_code="NFO",
+                                product="options",
+                                action=each_leg['action'],
+                                order_type='market',
+                                stoploss='',
+                                quantity="50",
+                                price="",
+                                validity="day",
+                                validity_date=today,
+                                disclosed_quantity="0",
+                                expiry_date=each_leg['expiry'],
+                                right=each_leg['right'],
+                                strike_price=each_leg['strike'])
 
-    try:
-        # Place options order 
-        buy_order = api.place_order(stock_code=each_leg['stock'],
-                                    exchange_code="NFO",
-                                    product="options",
-                                    action=each_leg['action'],
-                                    order_type='market',
-                                    stoploss='',
-                                    quantity="50",
-                                    price="",
-                                    validity="day",
-                                    validity_date=today,
-                                    disclosed_quantity="0",
-                                    expiry_date=each_leg['expiry'],
-                                    right=each_leg['right'],
-                                    strike_price=each_leg['strike'])
+    if(buy_order['Status']==200) : 
+        order_id = buy_order['Success']['order_id']
+        print(f'Successfully placed market order !\nOrder ID is {order_id}')
+        
+    else : 
+        print('\nFailed to place order!\n', buy_order['Error'])
 
-        if(buy_order['Status']==200) : 
-            order_id = buy_order['Success']['order_id']
-            print(f'Successfully placed market order !\nOrder ID is {order_id}')
-            return order_id
-
-        else : 
-            print('\nFailed to place order!\n', buy_order['Error'])
-            return False
-
-    except Exception as error:
-        print('Place Order API Error!', error)
-        return False
-
-# **************************************************************************************************************        
-
-def square_off_at_market(each_leg):
-    
-    today = datetime.now().strftime('%Y-%m-%dT06:00:00.000Z')    
-    print(f"\nSquaring off {each_leg['name']} at market")
-    
-    try:
-        # Place square off order 
-        sq_off_order = api.square_off(exchange_code="NFO",
-                    product="options",
-                    stock_code=each_leg['stock'],
-                    expiry_date=each_leg['expiry'],
-                    right=each_leg['right'],
-                    strike_price=each_leg['strike'],
-                    action="sell",
-                    order_type="market",
-                    validity="day",
-                    stoploss="",
-                    quantity="50",
-                    price="0",
-                    validity_date=today,
-                    trade_password="",
-                    disclosed_quantity="0")
-
-                
-        if(sq_off_order['Status']==200) : 
-            order_id = sq_off_order['Success']['order_id']
-            print(sq_off_order)
-            return order_id
-
-        else : 
-            print('\nFailed to square off!\n', sq_off_order['Error'])
-            return False
-
-    except Exception as error:
-        print('Place Order API Error!', error)
-        return False
-
-# **************************************************************************************************************            
 
     
 if __name__ == "__main__":
     print ("Starting Execution \n")
         
     # enter contract details
-    cx1 = get_contract('NIFTY-18000-29/mar/2023-CE', 'buy')
-    cx2 = get_contract('NIFTY-16000-29/mar/2023-PE', 'buy')
-
+    cx = {'stock': 'NIFTY',
+         'strike': '17750',
+         'expiry': '2023-04-20T06:00:00.000Z',
+         'expiry_date': '20-Apr-2023',
+         'right': 'call',
+         'name': 'NIFTY-17750-20/APR/2023-CE',
+         'action': 'buy'}
+    
     # Place order
-    call_order = place_order(cx1)
-    put_order = place_order(cx2)
-
-#     SquareOff order (uncomment below)
-
-#     square_off_at_market(cx1) 
-#     square_off_at_market(cx2)
+    place_order(cx)
