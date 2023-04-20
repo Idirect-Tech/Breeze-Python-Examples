@@ -49,10 +49,8 @@ if __name__ == "__main__":
     # enter contract details
     cx = {'stock': 'NIFTY',
          'strike': '17750',
-         'expiry': '2023-04-20T06:00:00.000Z',
-         'expiry_date': '20-Apr-2023',
-         'right': 'call',
-         'name': 'NIFTY-17750-20/APR/2023-CE',
+         'expiry': '2023-04-20T06:00:00.000Z',      
+         'right': 'call',         
          'action': 'buy'}
     
     # Place order
