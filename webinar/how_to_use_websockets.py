@@ -25,13 +25,7 @@ api.generate_session(api_secret=api_secret,session_token=api_session)
 # Event based function
 
 def on_ticks(ticks):
-    data.append(ticks)
-    if(len(data) > 10): close()
-    
-def close():
-  api.ws_disconnect()
-  df = pd.DataFrame(data)
-  df.to_csv('data.csv')
+    print(ticks)
         
 # *********************************************************************************************************************************************************************
     
@@ -39,9 +33,6 @@ def close():
 # Main Function        
 if __name__ == "__main__":
     print ("Starting Execution \n")
-
-    # List to store tick data
-    data=[]
 
     #Switch on Websockets
     api.ws_connect()
