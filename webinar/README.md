@@ -1,23 +1,23 @@
 These are code files that we used in our webinars.
 
 * tutorial1.py - code used in [How to get started with Breeze API](https://www.youtube.com/watch?v=GtqrSDpj0NE)
- * creating session and simply downloading historical data and taking it into a Pandas DataFrame
+  * creating session and simply downloading historical data and taking it into a Pandas DataFrame
 
 * tutorial2.py - code used in [Analysing historical market data from Breeze API using Pandas framework](https://www.youtube.com/watch?v=uZgAKrIMZBE)
- * working with Python's ```datetime``` basics
- * working with Python's ```list``` basics
- * working with Python's ```dictionary``` basics
- * working with Python's ```pandas Series``` and ```pandas DataFrame``` basics
- * using list of dates to download historical data in a loop, and taking the dictionaries into a DataFrame
- * playing with the market data in a DataFrame
+  * working with Python's ```datetime``` basics
+  * working with Python's ```list``` basics
+  * working with Python's ```dictionary``` basics
+  * working with Python's ```pandas Series``` and ```pandas DataFrame``` basics
+  * using list of dates to download historical data in a loop, and taking the dictionaries into a DataFrame
+  * playing with the market data in a DataFrame
 
 * tutorial3.py - code used in [Researching trading strategies using Pandas framework](https://www.youtube.com/watch?v=I4BAUYUyr7Q)
- * reading historical data csv into a Pandas DataFrame
- * exploratory analysis of the DataFrame
- * basic charting using MatPlotLib
- * applying Simple Moving Averages over 20 period and 50 period windows using Pandas built-in functions
- * deriving trading Signals and Positions from the SMA20 and SMA50 indicators
- * charting the indicators and generated trades over the price data
+  * reading historical data csv into a Pandas DataFrame
+  * exploratory analysis of the DataFrame
+  * basic charting using MatPlotLib
+  * applying Simple Moving Averages over 20 period and 50 period windows using Pandas built-in functions
+  * deriving trading Signals and Positions from the SMA20 and SMA50 indicators
+  * charting the indicators and generated trades over the price data
 
 * breeze_webinar_20230215.py
   * get_names() example
