@@ -20,3 +20,5 @@ obj.straddle(strategy_type = "long",
              strike_price = "18700",
              quantity = "50",
              expiry_date = "2023-06-29T06:00:00.000Z")
+#SquareOff existing positions and exit the strategy of straddle
+obj.stop() 
