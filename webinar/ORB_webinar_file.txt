@@ -1,0 +1,538 @@
+'''
+ORB stands for Opening Range Breakout. 
+
+In simple terms, it's a trading strategy that focuses on the price range formed in the first part of the trading session—often the first 15 or 30 minutes. 
+Traders look at the high and lowe prices during that initial time period, and use them as key levels to decide when to enter a trade.
+
+Here's how it works in a straightforward way:
+
+Opening Range: This is the high and low price of a stock during the first 15 or 30 minutes after the market opens.
+
+Breakout: If the stock price moves above the high of the opening range, it's called a breakout to the upside. 
+Traders might decide to buy because the price is breaking out of the range and could keep going higher.
+
+Similarly, If the stock price drops below the low of the opening range, it's called a breakout to the downside (or breakdown). 
+Traders might decide to sell or short the stock because the price could keep going lower.
+
+Why use ORB?
+Momentum: The idea is that the stock might continue moving in the direction of the breakout (up or down) because of strong market momentum.
+Clarity: It provides clear levels (the high and low of the opening range) for traders to make decisions.
+'''
+
+#Libraries needed to be installed, Some are in built in python and some you need to install
+#To install a missing library just follow this command : pip install library_name
+import pandas as pd
+from datetime import datetime, timedelta
+import pytz
+import json
+import os
+import time
+import urllib
+import schedule
+import shutil
+import os
+import csv
+from breeze_connect import BreezeConnect
+
+#inputs to be given by the user
+# breeze = BreezeConnect(api_key="44h!UX2034c430944%47779251Ll99DO")
+# breeze.generate_session(api_secret="zI910304O0L7X2298y24B619A8D9364m",
+#                         session_token="48074737")
+breeze = BreezeConnect(api_key="enter your API Key")
+breeze.generate_session(api_secret="enter your secret key",
+                        session_token="enter your session token")
+first_order = None
+first_orders = {}
+completed_orders_stocks = set() 
+# Initialize dictionaries to track order counts
+order_counts = {}
+# Define MAX_ORDERS_PER_STOCK. If 2 it will place a buy and a sell order only
+MAX_ORDERS_PER_STOCK = 2  
+# Declare target and stop-loss percentages manually
+buy_target_percentage = 1.005  # Example: 0.5% target for buy order
+buy_stoploss_percentage = 0.99  # Example: 1% stop-loss for buy order
+sell_target_percentage =0.995  # Example: 0.5% target for sell order
+sell_stoploss_percentage = 1.01  # Example: 1% stop-loss for sell order
+
+
+# Define the consistent column structure
+COLUMNS = ['symbol', 'open', 'last', 'high', 'low', 'ltt', 'close', 'exchange', 'stock_name']
+
+def save_tick_to_file(symbol, tick):
+    filename = f"{symbol}.csv"
+    temp_filename = f"{symbol}.csv.tmp"  # Temporary file for atomic write
+    backup_filename = f"{symbol}.csv.bak"  # Backup in case of corruption
+
+    try:
+        # Create a DataFrame with the fixed column structure
+        tick_df = pd.DataFrame([{
+            'symbol': tick.get('symbol', ''),
+            'open': tick.get('open', 0),
+            'last': tick.get('last', 0),
+            'high': tick.get('high', 0),
+            'low': tick.get('low', 0),
+            'ltt': tick.get('ltt', ''),
+            'close': tick.get('close', 0),
+            'exchange': tick.get('exchange', ''),
+            'stock_name': tick.get('stock_name', '')
+        }], columns=COLUMNS)
+
+        # Check if the file exists and is valid
+        if os.path.exists(filename) and not is_valid_csv(filename):
+            log_message(f"CSV file {filename} is corrupted, backing up and creating a new one.")
+            shutil.move(filename, backup_filename)  # Rename corrupted file to .bak
+        
+        # Write data to a temporary file
+        if os.path.exists(filename):
+            tick_df.to_csv(temp_filename, mode='a', header=False, index=False)
+        else:
+            tick_df.to_csv(temp_filename, mode='w', header=True, index=False)
+        
+        # Atomically replace the original file with the new one
+        shutil.move(temp_filename, filename)
+
+        log_message(f"Tick saved for {symbol}: {tick.get('symbol', '')}, Last: {tick.get('last', 'N/A')}, LTT: {tick.get('ltt', 'N/A')}")
+    
+    except Exception as e:
+        log_message(f"Error saving tick for {symbol}: {e}")
+        # Remove temp file in case of failure
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+
+def is_valid_csv(filename):
+    """
+    Check if the CSV file has valid content and can be read.
+    Returns True if valid, False if corrupted.
+    """
+    try:
+        with open(filename, 'r') as f:
+            reader = csv.reader(f)
+            headers = next(reader, None)
+            # Check if headers are present and match expected columns
+            if headers is None or len(headers) != len(COLUMNS):
+                log_message(f"CSV file {filename} is corrupted or missing columns.")
+                return False
+            return True
+    except Exception as e:
+        log_message(f"Error checking validity of {filename}: {e}")
+        return False
+
+
+def get_latest_tick(symbol, retries=3):
+    filename = f"{symbol}.csv"
+    attempts = 0
+
+    while attempts < retries:
+        try:
+            # Check if file exists and is valid
+            if not os.path.exists(filename):
+                log_message(f"No file found for {symbol}")
+                return None
+            
+            if os.path.getsize(filename) == 0 or not is_valid_csv(filename):
+                log_message(f"File {symbol}.csv is invalid or empty, skipping.")
+                return None
+
+            # Read the CSV file, skipping bad lines
+            df = pd.read_csv(filename, on_bad_lines='skip')
+            if df.empty:
+                log_message(f"No data found in {symbol}.csv")
+                return None
+
+            # Ensure 'ltt' column is present
+            if 'ltt' not in df.columns:
+                log_message(f"'ltt' column missing in {symbol}.csv")
+                return None
+
+            # Convert 'ltt' to datetime format for proper sorting
+            df['ltt'] = pd.to_datetime(df['ltt'], errors='coerce')
+
+            # Get the row with the latest 'ltt' timestamp
+            latest_tick_row = df.loc[df['ltt'].idxmax()]
+
+            return latest_tick_row.to_dict()
+
+        except Exception as e:
+            log_message(f"Error getting latest tick for {symbol}: {e}, Attempt {attempts+1}/{retries}")
+            attempts += 1
+
+        if attempts == retries:
+            log_message(f"Failed to get latest tick for {symbol} after {retries} retries.")
+            return None
+
+def first_order_placed(stock_token):
+    return first_orders.get(stock_token) is not None
+def set_first_order(stock_token, action, price):
+    first_orders[stock_token] = (action, price)
+def initialize_order_count(symbol):
+    order_counts[symbol] = {
+        'buy_count': 0,
+        'sell_count': 0,
+        'total_orders': 0
+    }
+
+def check_order_limits(symbol):
+    return order_counts[symbol]['total_orders'] < MAX_ORDERS_PER_STOCK
+
+def update_order_counts(symbol, action):
+    if action == 'buy':
+        order_counts[symbol]['buy_count'] += 1
+    elif action == 'sell':
+        order_counts[symbol]['sell_count'] += 1
+    order_counts[symbol]['total_orders'] += 1
+
+def check_ticks():
+    global first_order
+    log_message("Checking ticks...")
+    
+    current_time = datetime.now(pytz.timezone("Asia/Kolkata")).time()
+    if current_time >= datetime.strptime("15:00:00", "%H:%M:%S").time():
+        log_message("Order placing is disabled after 3:00 PM.")
+        return
+
+    for symbol in stock_high_low.keys():
+        if symbol in completed_orders_stocks:
+            continue
+
+        # Initialize order count if not done yet
+        if symbol not in order_counts:
+            initialize_order_count(symbol)
+
+        # Check if order limits are exceeded
+        if not check_order_limits(symbol):
+            log_message(f"Order limit reached for {symbol}, skipping further orders.")
+            completed_orders_stocks.add(symbol)
+            continue
+
+        latest_tick = get_latest_tick(symbol)
+        if latest_tick is None:
+            log_message(f"No valid tick for {symbol}, skipping this iteration.")
+            continue  # Ignore this symbol and move to the next one
+        if latest_tick:
+            last_price = latest_tick['last']  # Assuming 'ltp' is the last traded price
+            high = stock_high_low[symbol]['high']
+            low = stock_high_low[symbol]['low']
+
+            # Check if first order has been placed
+            if not first_order_placed(symbol):
+                # Decide based on the price crossing high or low
+                if last_price > high and order_counts[symbol]['total_orders'] % 2 == 0:
+                    # Place buy order
+                    order_params = create_order_params(latest_tick, action="buy", price="0", stoploss_price="0")
+                    log_message(f"Placing first buy order: {order_params}")
+                    order_id = place_order(order_params)
+                    if order_id:
+                        update_order_counts(symbol, "buy")
+                        set_first_order(symbol, "buy", last_price)
+                
+                elif last_price < low and order_counts[symbol]['total_orders'] % 2 == 0:
+                    # Place sell order
+                    order_params = create_order_params(latest_tick, action="sell", price="0", stoploss_price="0")
+                    log_message(f"Placing first sell order: {order_params}")
+                    order_id = place_order(order_params)
+                    if order_id:
+                        update_order_counts(symbol, "sell")
+                        set_first_order(symbol, "sell", last_price)
+            
+            else:
+                # First order already placed
+                first_order_action, first_order_price = first_orders[symbol]
+
+                if first_order_action == "buy" and (last_price > first_order_price * buy_target_percentage or last_price < first_order_price * buy_stoploss_percentage) and order_counts[symbol]['total_orders'] % 2 != 0:
+                    # Place sell order after buy
+                    order_params = create_order_params(latest_tick, action="sell", price="0", stoploss_price=0)
+                    log_message(f"Placing sell order after buy: {order_params}")
+                    order_id = place_order(order_params)
+                    if order_id:
+                        update_order_counts(symbol, "sell")
+                        first_orders.pop(symbol, None)
+                
+                elif first_order_action == "sell" and (last_price < first_order_price * sell_target_percentage or last_price > first_order_price * sell_stoploss_percentage) and order_counts[symbol]['total_orders'] % 2 != 0:
+                    # Place buy order after sell
+                    order_params = create_order_params(latest_tick, action="buy", price="0", stoploss_price=0)
+                    log_message(f"Placing buy order after sell: {order_params}")
+                    order_id = place_order(order_params)
+                    if order_id:
+                        update_order_counts(symbol, "buy")
+                        first_orders.pop(symbol, None)
+
+        if first_order_placed(symbol) and len(first_orders) == 0:
+            completed_orders_stocks.add(symbol)
+
+# Now integrate this function into your main loop as before.
+
+def create_order_params(tick, action, price, stoploss_price):
+    stock_token = tick['symbol']
+    stock_code = None
+    for name, codes in stock_isec_codes.items():
+        if codes['stock_token'] == stock_token:
+            stock_code = codes['isec_stock_code']
+            break    
+    if stock_code is None:
+        log_message(f"Error: stock_code not found for {stock_token}")
+        return None    
+    return {
+        "stock_code": stock_code,
+        "exchange_code": "NSE",
+        "product": "margin",
+        "action": action,
+        "order_type": "market",
+        "stoploss": str(stoploss_price),
+        "quantity": "1",   #change if you want to change
+        "price": price,
+        "validity": "day",
+        "user_remark": "strategyorder"
+    }
+breeze.ws_connect()
+def save_tick_to_file(symbol, tick):
+    filename = f"{symbol}.csv"
+    try:
+        # Check and extract fields, ensuring they are not lists
+        tick_df = pd.DataFrame([{
+            'symbol': tick.get('symbol', ''),
+            'open': tick.get('open', [None])[0] if isinstance(tick.get('open'), list) else tick.get('open'),
+            'last': tick.get('last', [None])[0] if isinstance(tick.get('last'), list) else tick.get('last'),
+            'high': tick.get('high', [None])[0] if isinstance(tick.get('high'), list) else tick.get('high'),
+            'low': tick.get('low', [None])[0] if isinstance(tick.get('low'), list) else tick.get('low'),
+            'ltt': tick.get('ltt', [None])[0] if isinstance(tick.get('ltt'), list) else tick.get('ltt'),
+            'close': tick.get('close', [None])[0] if isinstance(tick.get('close'), list) else tick.get('close'),
+            'exchange': tick.get('exchange', ''),
+            'stock_name': tick.get('stock_name', '')
+        }])
+
+        if os.path.exists(filename):
+            # Append to the existing CSV file
+            existing_df = pd.read_csv(filename)
+            df = pd.concat([existing_df, tick_df], ignore_index=True, sort=False)
+        else:
+            # Create a new CSV file if it doesn't exist
+            df = tick_df
+
+        df.to_csv(filename, index=False)
+        log_message(f"Tick saved for {symbol}: {tick.get('symbol')}, LTP: {tick.get('last')}, LTT: {tick.get('ltt')}")
+    
+    except Exception as e:
+        log_message(f"Error saving tick: {e}")
+
+
+
+def log_tick_information(tick):
+    """Log only essential information about the tick."""
+    try:
+        symbol = tick.get('symbol')
+        last_price = tick.get('last')
+        ltt = tick.get('ltt')
+
+        log_message(f"Tick received - Symbol: {symbol}, LTP: {last_price}, LTT: {ltt}")
+    
+    except Exception as e:
+        log_message(f"Error logging tick information: {e}")
+
+
+def on_ticks(ticks):
+    log_message("Received ticks")
+    try:
+        if isinstance(ticks, dict):
+            ticks_list = [ticks]
+        elif isinstance(ticks, list):
+            ticks_list = ticks
+        else:
+            log_message(f"Error: Ticks should be a list or a dictionary, but received: {type(ticks)}")
+            return
+        
+        for tick in ticks_list:
+            if not isinstance(tick, dict):
+                log_message(f"Error: Tick is not a dictionary")
+                continue
+            
+            symbol = tick.get('symbol')
+            if symbol:
+                log_tick_information(tick)  # Log only necessary fields
+                save_tick_to_file(symbol, tick)  # Save filtered columns
+            else:
+                log_message("Error: Symbol missing in tick data")
+    
+    except Exception as e:
+        log_message(f"Error in on_ticks: {e}")
+
+def get_stock_names(filename):
+    log_message("Getting stock names...")
+    try:
+        # filename = 'Stock_List_Nifty50.csv'
+        df = pd.read_csv(filename)
+        stock_names = df.iloc[:, 0].tolist()
+        log_message(f"Extracted stock names: {stock_names}")
+        
+        stock_isec_codes = {}
+        for stock_name in stock_names:
+            response = breeze.get_names(exchange_code='NSE', stock_code=stock_name)            
+            if isinstance(response, dict) and 'isec_stock_code' in response and 'isec_token_level1' in response:
+                stock_isec_codes[stock_name] = {
+                    'isec_stock_code': response['isec_stock_code'],
+                    'stock_token': response['isec_token_level1']
+                }
+            else:
+                log_message(f"Error: Unexpected response format for {stock_name}")        
+        return stock_isec_codes
+    except Exception as e:
+        log_message(f"Error getting stock names: {e}")
+        return {}
+def get_high_low_for_stocks(stock_isec_codes):
+    log_message("Getting high and low values for stocks...")
+    try:
+        today = datetime.now(pytz.timezone("Asia/Kolkata"))
+        if datetime.now().time() >= datetime.strptime("09:30:00", "%H:%M:%S").time() and datetime.now().time() < datetime.strptime("09:45:00", "%H:%M:%S").time():
+            from_date = today.replace(hour=9, minute=15, second=0, microsecond=0)
+            to_date = today.replace(hour=9, minute=30, second=0, microsecond=0)
+        else:
+            from_date = today.replace(hour=9, minute=15, second=0, microsecond=0)
+            to_date = today.replace(hour=9, minute=45, second=0, microsecond=0)        
+        from_date_str = from_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        to_date_str = to_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")       
+        stock_high_low = {}
+        for stock_name, codes in stock_isec_codes.items():
+            response = breeze.get_historical_data_v2(
+                stock_code=codes['isec_stock_code'],
+                interval="5minute",
+                from_date=from_date_str,
+                to_date=to_date_str,
+                exchange_code="NSE",
+                product_type="cash"
+            )            
+            if isinstance(response, dict) and 'Success' in response:
+                highs = [item['high'] for item in response['Success']]
+                lows = [item['low'] for item in response['Success']]
+                highest = max(highs)
+                lowest = min(lows)
+                stock_token = codes['stock_token']
+                stock_high_low[stock_token] = {'high': highest, 'low': lowest}
+                log_message(f"Token {stock_token}: High = {highest}, Low = {lowest}")
+            else:
+                log_message(f"No data found for {stock_name}.")        
+        return stock_high_low
+    except Exception as e:
+        log_message(f"Error getting high and low values: {e}")
+        return {}
+def get_isec_tokens(stock_isec_codes):
+    log_message("Getting isec_tokens for WebSocket subscription...")
+    try:
+        isec_tokens = []
+        for stock_name, codes in stock_isec_codes.items():
+            isec_tokens.append(codes['stock_token'])
+        return isec_tokens
+    except Exception as e:
+        log_message(f"Error getting isec_tokens: {e}")
+        return []        
+def place_order(order_params):
+    try:
+        response = breeze.place_order(**order_params)
+        if response.get('Status') == 200:
+            order_id = response['Success'].get('order_id')
+            log_message(f"Order placed: {order_params}, Order ID: {order_id}")
+            return order_id
+        else:
+            log_message(f"Failed to place order: {response.get('Error')}")
+            return None
+    except Exception as e:
+        log_message(f"Error placing order: {e}")
+        return None        
+def verify_orders():
+    global buy_order_count, sell_order_count
+    today_date = datetime.now().strftime("%Y-%m-%d")
+    from_date = f"{today_date}T07:00:00.000Z"
+    to_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z")    
+    try:
+        order_response = breeze.get_order_list(
+            exchange_code="NSE",
+            from_date=from_date,
+            to_date=to_date
+        )        
+        orders = order_response.get('Success', [])
+        if not orders:  # Check if orders list is empty or None
+            log_message("No strategy orders found in the verification step.")
+            return 0, 0        
+        buy_order_count = 0
+        sell_order_count = 0
+        for order in orders:
+            if order.get('user_remark') == 'strategyorder':
+                log_message(f"Order verified: {order}")
+                if order.get('action', '').lower() == 'buy':
+                    buy_order_count += 1
+                elif order.get('action', '').lower() == 'sell':
+                    sell_order_count += 1
+        return buy_order_count, sell_order_count
+    except Exception as e:
+        log_message(f"Error verifying orders: {e}")
+        return 0, 0
+
+def run_check_ticks():
+    check_ticks()
+    
+def log_message(message):
+    """Log messages to a file."""
+    log_filename = "trade_log.txt"
+    with open(log_filename, 'a') as log_file:
+        log_file.write(f"{datetime.now()}: {message}\n")
+    print(message)
+
+def main():
+    try:
+        log_message("Starting main function")
+        global stock_isec_codes
+        global stock_high_low
+        global order_ids  # Define order_ids as a global variable
+        global sell_order_count, buy_order_count  # Define sell_order_count and buy_order_count as global variables
+
+        # Initialize variables
+        order_ids = []
+        sell_order_count = 0
+        buy_order_count = 0
+
+        filename = "Stock_List_Nifty50.csv"
+        stock_isec_codes = get_stock_names(filename)
+        
+        if not stock_isec_codes:
+            log_message("Error: No stock names found.")
+            return
+        
+        isec_tokens = get_isec_tokens(stock_isec_codes)
+        
+        if not isec_tokens:
+            log_message("Error: No isec_tokens found for WebSocket subscription.")
+            return
+        
+        breeze.on_ticks = on_ticks
+        breeze.subscribe_feeds(isec_tokens)
+        
+        # Waiting for 9:30 AM
+        while True:
+            current_time = datetime.now(pytz.timezone("Asia/Kolkata")).time()
+            if current_time >= datetime.strptime("09:30:00", "%H:%M:%S").time():
+                break
+            else:
+                log_message("Waiting for 9:30 AM")
+                time.sleep(10)  # Wait until 9:30 AM
+        
+        # Fetch high/low values after 9:30 AM
+        stock_high_low = get_high_low_for_stocks(stock_isec_codes)
+        if not stock_high_low:
+            log_message("Error: No high/low values found.")
+            return
+        
+        # Main loop: Call check_ticks() every minute after 9:30 AM
+        while True:
+            current_time = datetime.now(pytz.timezone("Asia/Kolkata")).time()
+            if current_time >= datetime.strptime("15:00:00", "%H:%M:%S").time():
+                log_message("Trading hours are over. No further orders will be placed after 3:00 PM.")
+                breeze.ws_disconnect()
+                break
+            check_ticks()
+            log_message("check_ticks called")
+            time.sleep(30)
+
+            
+    except Exception as e:
+        log_message(f"Error in main execution: {e}")
+
+if __name__ == "__main__":
+    main()
