@@ -35,9 +35,6 @@ import csv
 from breeze_connect import BreezeConnect
 
 #inputs to be given by the user
-# breeze = BreezeConnect(api_key="44h!UX2034c430944%47779251Ll99DO")
-# breeze.generate_session(api_secret="zI910304O0L7X2298y24B619A8D9364m",
-#                         session_token="48074737")
 breeze = BreezeConnect(api_key="enter your API Key")
 breeze.generate_session(api_secret="enter your secret key",
                         session_token="enter your session token")
