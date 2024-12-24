@@ -1,0 +1,166 @@
+import pandas as pd
+import numpy as np
+from breeze_connect import BreezeConnect
+from datetime import datetime
+import threading
+import queue
+import logging as logger
+import json
+
+logger.basicConfig(level = logger.INFO, handlers=[logger.StreamHandler()])
+
+file = open("config.txt", "r")
+keys = file.read().split(",")
+
+key_api = keys[0]
+key_secret = keys[1]
+key_session = keys[2]
+try:
+    breeze = BreezeConnect(api_key=key_api)
+    breeze.generate_session(api_secret=key_secret, session_token=key_session)
+    logger.info("Breeze Session Initialized Successfully.")
+except Exception as ex:
+    logger.error(f"Error Initializing Breeze Session:{ex}")
+    exit(1) # Immediate Exit
+
+#Queues for ticks
+ticks_queue = queue.Queue()
+running = True 
+position = None #Track Position Buy Sell or None
+ema_short_period = 12
+ema_long_period = 26
+rsi_period = 14
+rsi_overbought = 70
+rsi_oversold = 30
+
+#Historical Data to Calculate Indicators
+tick_data = pd.DataFrame(columns=["datetime", "close"])
+
+def calculate_ema(prices,period):
+    "Calculate EMA"
+    return prices.ewm(span=period, adjust=False).mean().iloc[-1]
+
+def calculate_rsi(prices, period):
+    "Calculate RSI"
+    delta = prices.diff()
+    gain = (delta.where(delta>0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta<0,0)).rolling(window=period).mean()
+    rs = gain/loss
+    return 100-(100/(1+rs)).iloc[-1]
+
+def on_ticks(ticks):
+    "Callback to handle ticks"
+    try:
+        ticks = json.load(ticks) if isinstance(ticks, str) else ticks
+        print(f"ticks:{ticks}")
+        # for tick in ticks:
+        timestamp = datetime.now()
+        close_price = ticks.get("last", None)
+        print(f"Close Price:{close_price}")
+        if close_price:
+            tick_data.loc[len(tick_data)] = {"datetime":timestamp, "close":close_price}
+            #Keep only recent data
+            if len(tick_data) > rsi_period + ema_long_period:
+                tick_data.drop(index=0, inplace=True)
+            ticks_queue.put(close_price)
+    except Exception as ex:
+        logger.error(f"Error processing tick:{ex}")
+
+
+breeze.on_ticks = on_ticks
+
+def execute_trade(action:str):
+    try:
+        if action == "buy":
+            logger.info("Placing Buy Order")
+            # breeze.place_order(stock_code="ITC",
+            #         exchange_code="NSE",
+            #         product="cash",
+            #         action="buy",
+            #         order_type="limit",
+            #         stoploss="",
+            #         quantity="1",
+            #         price="305",
+            #         validity="day"
+            #     )
+        elif action == "sell":
+            logger.info("Placing a sell order")
+            # breeze.place_order(stock_code="ITC",
+            #         exchange_code="NSE",
+            #         product="cash",
+            #         action="sell",
+            #         order_type="limit",
+            #         stoploss="",
+            #         quantity="1",
+            #         price="305",
+            #         validity="day"
+            #     )
+
+    except Exception as ex:
+        logger.error(f"Error placing order:{ex}")
+
+def process_ticks():
+    """"Process and Exceute the strategy"""
+    global position 
+    while running:
+        try:
+            price = ticks_queue.get_nowait()
+            prices = tick_data["close"]
+
+            if len(prices) >= rsi_period + ema_long_period:
+                #Calculate Indictaors
+                ema_short = calculate_ema(prices, ema_short_period)
+                ema_short = round(ema_short, 2)
+                ema_long = calculate_ema(prices, ema_long_period)
+                ema_long = round(ema_long, 2)
+                rsi = calculate_rsi(prices, rsi_period)
+                rsi = round(rsi, 2)
+
+                logger.info(f"EMA Short:{ema_short}, EMA Long{ema_long}")
+                logger.info(f"RSI:{rsi}")
+                #Strategy Logic
+                if position is None:
+                    if rsi < rsi_oversold and ema_short > ema_long:
+                        print("Oversold Condition Met..")
+                        execute_trade("buy")
+                        position = "buy"
+
+                    elif position == "buy":
+                        if rsi > rsi_overbought or ema_short < ema_long:
+                            print("Over Bought Condition Met..")
+                            execute_trade("sell")
+                            position = None
+        except queue.Empty:
+            continue 
+
+#Start Processing Threads
+ticks_thread = threading.Thread(target=process_ticks, daemon=True)
+ticks_thread.start()
+
+try:
+    breeze.ws_connect()
+    breeze.subscribe_feeds(
+        exchange_code="NFO",
+        stock_code="NIFTY",
+        product_type="options",
+        expiry_date = "26-Dec-2024",
+        strike_price = "24000",
+        right="Call",
+        get_exchange_quotes=True,
+        get_market_depth=False
+    )
+    while running:
+        pass #Keep main Thread Running
+except KeyboardInterrupt:
+    logger.info("Gracefully Shutting Down")
+
+finally:
+    running = False
+    ticks_thread.join()
+    breeze.ws_disconnect()
+    logger.info("Application Terminated")
+
+
+
+
+
