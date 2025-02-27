@@ -1,0 +1,17 @@
+breeze.place_order(stock_code="SAIL",
+                    exchange_code="NSE",
+                    product="mtf",
+                    action="buy",
+                    order_type="limit",
+                    stoploss="",
+                    quantity="1",
+                    price="110",
+                    validity="day"
+                )
+
+Output:
+{'Success': {'order_id': '20254444444111',
+  'message': 'Equity MTF Order placed successfully through RI reference no 20250227N300012345',
+  'user_remark': None},
+ 'Status': 200,
+ 'Error': None}
